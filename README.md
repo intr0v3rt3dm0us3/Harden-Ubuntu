@@ -55,7 +55,7 @@ This script accounts for breaking changes in 24.04 that trip up older hardening 
 ssh root@your-server-ip
 
 # 2. Download the script
-curl -O https://raw.githubusercontent.com/YOUR_USERNAME/ubuntu-hardening/main/harden.sh
+curl -O curl -O https://raw.githubusercontent.com/intr0v3rt3dm0us3/ubuntu-hardening/main/harden.sh
 
 # 3. Make executable and run — everything is interactive, no editing required
 chmod +x harden.sh
