@@ -1,14 +1,8 @@
 # Ubuntu 24.04 LTS — Interactive Server Hardening Script
 
-*** ALPHA VERSION. ***
-*** TEST AND USE AT OWN RISK. ***
-*** CREATED WITH CLAUDE AI ***
-
 A single interactive bash script that hardens a fresh Ubuntu 24.04 LTS server. Every setting is configured through interactive prompts — **no manual file editing required**. Each step prompts you with **Y/n** before executing.
 
 Designed for **DigitalOcean droplets** (512MB / 1 CPU / 10GB SSD) but works on any Ubuntu 24.04 VPS.
-
-*** ONLY TESTED ON ABOVE DROPLET ***
 
 ## What It Does
 
@@ -59,7 +53,7 @@ This script accounts for breaking changes in 24.04 that trip up older hardening 
 ssh root@your-server-ip
 
 # 2. Download the script
-curl -O https://raw.githubusercontent.com/intr0v3rt3dm0us3/Harden-Ubuntu/refs/heads/main/harden.sh
+curl -O https://raw.githubusercontent.com/YOUR_USERNAME/ubuntu-hardening/main/harden.sh
 
 # 3. Make executable and run — everything is interactive, no editing required
 chmod +x harden.sh
