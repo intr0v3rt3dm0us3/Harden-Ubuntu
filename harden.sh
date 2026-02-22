@@ -17,8 +17,10 @@
 #  Each hardening step will prompt you with [Y/n] before executing.
 #  Press Enter to accept the default (Yes) or type 'n' to skip.
 #
-#  IMPORTANT: Have an SSH key already added to the server before running
-#             the SSH hardening section, or you WILL be locked out.
+#  IMPORTANT: The script will guide you through SSH key setup, but ideally
+#             have an SSH key already added to the server before running.
+#             Generate one on YOUR computer: ssh-keygen -t ed25519
+#             Copy it to the server: ssh-copy-id root@your-server-ip
 # =============================================================================
 
 set -euo pipefail
@@ -60,6 +62,9 @@ SMTP_PASS=""
 readonly SCRIPT_VERSION="1.0.0"
 readonly LOG_FILE="/var/log/harden-$(date +%Y%m%d-%H%M%S).log"
 readonly BACKUP_DIR="/root/harden-backup-$(date +%Y%m%d-%H%M%S)"
+
+# Cache the server's public IP (used in prompts and connection instructions)
+SERVER_IP=$(curl -s --max-time 5 ifconfig.me 2>/dev/null || echo "YOUR_SERVER_IP")
 
 # Counters
 STEPS_RUN=0
@@ -246,8 +251,41 @@ echo "  • Skip any step by typing 'n' — re-run the script anytime to apply i
 echo ""
 echo -e "${YELLOW}Before we begin:${NC}"
 echo -e "  • SSH Port:  ${BOLD}${SSH_PORT}${NC} (randomly generated — ${RED}write this down!${NC})"
-echo -e "  • Make sure your SSH public key is already on this server"
-echo -e "    (the script will disable password-based SSH login)"
+echo ""
+echo -e "  • ${BOLD}Your SSH public key must already be on this server.${NC}"
+echo "    This script will disable password-based SSH login, so keys are your"
+echo "    only way in after hardening. If you don't have a key here yet, press"
+echo "    Ctrl+C now and follow the steps below first."
+echo ""
+echo -e "  ${CYAN}What is an SSH key?${NC}"
+echo "    An SSH key pair is like a lock and key for your server:"
+echo "      • Private key = stays on YOUR computer (never share this!)"
+echo "      • Public key  = goes on the SERVER (safe to share)"
+echo "    When you connect, your computer proves it has the private key"
+echo "    without ever sending it. No password to intercept or guess."
+echo ""
+echo -e "  ${CYAN}Why keys instead of passwords?${NC}"
+echo "    • Passwords can be guessed — keys are 2048-4096 bit cryptographic proofs"
+echo "    • Passwords get phished — keys require physical access to your machine"
+echo "    • Passwords get reused — keys are unique per machine"
+echo "    • Bots brute-force passwords 24/7 — keys make this impossible"
+echo ""
+echo -e "  ${CYAN}How to check if you already have a key (run on YOUR computer):${NC}"
+echo "    Windows (PowerShell): dir ~\\.ssh\\id_*.pub"
+echo "    Mac/Linux:            ls ~/.ssh/id_*.pub"
+echo ""
+echo "    If you see a file (like id_ed25519.pub or id_rsa.pub), you have a key."
+echo ""
+echo -e "  ${CYAN}How to generate a key (on YOUR computer, not the server):${NC}"
+echo "    ssh-keygen -t ed25519 -C \"your-email@example.com\""
+echo "    (Press Enter for defaults. Set a passphrase for extra security.)"
+echo ""
+echo -e "  ${CYAN}How to copy your key to this server (on YOUR computer):${NC}"
+echo "    Mac/Linux:  ssh-copy-id root@${SERVER_IP}"
+echo "    Windows:    type ~\\.ssh\\id_ed25519.pub | ssh root@${SERVER_IP} \"cat >> ~/.ssh/authorized_keys\""
+echo ""
+echo "    DigitalOcean: You can also add keys in your DO dashboard under"
+echo "    Settings → Security → SSH Keys, and select it when creating a droplet."
 echo ""
 
 if ! prompt_yn "Ready to begin hardening?"; then
@@ -474,13 +512,51 @@ if prompt_yn "Create an admin user?"; then
     ADMIN_HOME=$(eval echo "~${ADMIN_USER}")
     mkdir -p "${ADMIN_HOME}/.ssh"
 
+    echo ""
+    echo -e "  ${CYAN}Copying SSH keys from root to '${ADMIN_USER}'...${NC}"
+    echo "  After hardening, you'll log in as '${ADMIN_USER}' (not root)."
+    echo "  Your SSH key needs to be in ${ADMIN_USER}'s authorized_keys file."
+    echo ""
+
     if [[ -f /root/.ssh/authorized_keys ]]; then
         cp /root/.ssh/authorized_keys "${ADMIN_HOME}/.ssh/authorized_keys"
-        log_info "Copied root's authorized_keys to $ADMIN_USER."
+        KEY_COUNT=$(grep -c "^ssh-" "${ADMIN_HOME}/.ssh/authorized_keys" 2>/dev/null || echo "0")
+        log_info "Copied root's authorized_keys to $ADMIN_USER (${KEY_COUNT} key(s) found)."
+
+        if [[ "$KEY_COUNT" -gt 0 ]]; then
+            echo ""
+            echo -e "  ${GREEN}Found ${KEY_COUNT} SSH key(s):${NC}"
+            while IFS= read -r key; do
+                # Show the key type and comment (last field) for identification
+                KEY_TYPE=$(echo "$key" | awk '{print $1}')
+                KEY_COMMENT=$(echo "$key" | awk '{print $NF}')
+                echo "    • ${KEY_TYPE} — ${KEY_COMMENT}"
+            done < <(grep "^ssh-" "${ADMIN_HOME}/.ssh/authorized_keys")
+            echo ""
+        fi
     else
         log_warn "No /root/.ssh/authorized_keys found!"
-        log_warn "Make sure you add your SSH public key to ${ADMIN_HOME}/.ssh/authorized_keys"
-        log_warn "BEFORE the SSH hardening step, or you will be locked out."
+        echo ""
+        echo -e "  ${RED}${BOLD}⚠ WARNING: No SSH key detected on this server!${NC}"
+        echo ""
+        echo "  Without an SSH key, you WILL be locked out after Step 5 (SSH hardening)"
+        echo "  because password login will be disabled."
+        echo ""
+        echo -e "  ${BOLD}To fix this right now (from YOUR computer, in a new terminal):${NC}"
+        echo ""
+        echo "    1. Generate a key (if you don't have one):"
+        echo "       ssh-keygen -t ed25519 -C \"your-email@example.com\""
+        echo ""
+        echo "    2. Copy it to this server:"
+        echo "       ssh-copy-id root@${SERVER_IP}"
+        echo ""
+        echo "    3. Then copy it to your admin user:"
+        echo "       mkdir -p ${ADMIN_HOME}/.ssh"
+        echo "       cp /root/.ssh/authorized_keys ${ADMIN_HOME}/.ssh/authorized_keys"
+        echo "       chown -R ${ADMIN_USER}:${ADMIN_USER} ${ADMIN_HOME}/.ssh"
+        echo ""
+        echo -e "  ${YELLOW}You can continue the script now and skip Step 5 until keys are in place.${NC}"
+        echo ""
     fi
 
     chown -R "${ADMIN_USER}:${ADMIN_USER}" "${ADMIN_HOME}/.ssh"
@@ -514,12 +590,49 @@ echo "    - Regenerate host keys (Ed25519 + RSA 4096)"
 echo "    - Remove weak Diffie-Hellman moduli"
 echo "    - Set strict session limits"
 echo ""
-echo -e "  ${RED}${BOLD}WARNING:${NC} Ensure you have:"
-echo "    1. An SSH key added to the server"
-echo "    2. The key copied to '$ADMIN_USER' (Step 4)"
-echo ""
+
+# Verify SSH keys exist before proceeding
+ADMIN_HOME=$(eval echo "~${ADMIN_USER}")
+if [[ -f "${ADMIN_HOME}/.ssh/authorized_keys" ]]; then
+    KEY_COUNT=$(grep -c "^ssh-" "${ADMIN_HOME}/.ssh/authorized_keys" 2>/dev/null || echo "0")
+    if [[ "$KEY_COUNT" -gt 0 ]]; then
+        echo -e "  ${GREEN}✓ Found ${KEY_COUNT} SSH key(s) for '${ADMIN_USER}' — you're good to proceed.${NC}"
+        echo ""
+    else
+        echo -e "  ${RED}${BOLD}⚠ WARNING: authorized_keys exists but contains no valid keys!${NC}"
+        echo "  Proceeding will lock you out. Add your key first (see Step 4 output)."
+        echo ""
+    fi
+else
+    echo -e "  ${RED}${BOLD}⚠ WARNING: No SSH keys found for '${ADMIN_USER}'!${NC}"
+    echo "  If you continue and skip key setup, password login stays enabled."
+    echo "  If you continue and disable password login, you WILL be locked out."
+    echo ""
+fi
+
 echo -e "  ${YELLOW}Port 22 will remain open as a safety net.${NC}"
 echo "  You will be reminded to close it after verifying the new port."
+echo ""
+echo -e "  ${CYAN}How to connect after reboot (from YOUR computer):${NC}"
+echo ""
+echo "    ssh -p ${SSH_PORT} ${ADMIN_USER}@${SERVER_IP}"
+echo ""
+echo "  If your SSH client complains about a changed host key after reboot"
+echo "  (because this step regenerates host keys), fix it with:"
+echo ""
+echo "    ssh-keygen -R \"[${SERVER_IP}]:${SSH_PORT}\""
+echo ""
+echo -e "  ${CYAN}Save this to your SSH config for easy access (on YOUR computer):${NC}"
+echo ""
+echo "  Add to ~/.ssh/config (Mac/Linux) or ~\\.ssh\\config (Windows):"
+echo ""
+echo "    Host myserver"
+echo "        HostName ${SERVER_IP}"
+echo "        Port ${SSH_PORT}"
+echo "        User ${ADMIN_USER}"
+echo "        IdentityFile ~/.ssh/id_ed25519"
+echo ""
+echo "  Then just type: ssh myserver"
 echo ""
 
 if prompt_yn "Harden SSH configuration?"; then
@@ -2377,7 +2490,7 @@ echo -e "${BOLD}─── POST-HARDENING CHECKLIST ───${NC}"
 echo ""
 echo -e "  ${BOLD}1. TEST SSH (do this NOW, in a NEW terminal):${NC}"
 echo ""
-echo -e "     ssh -p ${SSH_PORT} ${ADMIN_USER}@$(curl -s ifconfig.me 2>/dev/null || echo 'YOUR_SERVER_IP')"
+echo -e "     ssh -p ${SSH_PORT} ${ADMIN_USER}@${SERVER_IP}"
 echo ""
 echo -e "  ${RED}${BOLD}   IMPORTANT: Your SSH port is ${SSH_PORT} — write this down!${NC}"
 echo ""
