@@ -8,6 +8,8 @@ A single interactive bash script that hardens a fresh Ubuntu 24.04 LTS server. E
 
 Designed for **DigitalOcean droplets** (512MB / 1 CPU / 10GB SSD) but works on any Ubuntu 24.04 VPS.
 
+*** ONLY TESTED ON ABOVE DROPLET ***
+
 ## What It Does
 
 | Step | Description |
