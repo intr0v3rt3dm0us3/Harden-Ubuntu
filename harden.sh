@@ -906,9 +906,12 @@ JAILAPPEND
     systemctl enable fail2ban
     systemctl restart fail2ban
 
+    # Give Fail2ban a moment to start before querying status
+    sleep 3
+
     ((STEPS_RUN++)) || true
     log_info "Fail2ban configured and running."
-    fail2ban-client status 2>&1 | tee -a "$LOG_FILE"
+    fail2ban-client status 2>&1 | tee -a "$LOG_FILE" || log_warn "Fail2ban status check failed (service may still be starting). Verify later: sudo fail2ban-client status"
 else
     ((STEPS_SKIPPED++)) || true
     log_warn "Skipped Fail2ban configuration."
