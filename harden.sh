@@ -245,9 +245,9 @@ echo "  • No manual file editing required — just answer the prompts"
 echo "  • Skip any step by typing 'n' — re-run the script anytime to apply it later"
 echo ""
 echo -e "${YELLOW}Before we begin:${NC}"
-echo "  • SSH Port:  ${BOLD}${SSH_PORT}${NC} (randomly generated — ${RED}write this down!${NC})"
-echo "  • Make sure your SSH public key is already on this server"
-echo "    (the script will disable password-based SSH login)"
+echo -e "  • SSH Port:  ${BOLD}${SSH_PORT}${NC} (randomly generated — ${RED}write this down!${NC})"
+echo -e "  • Make sure your SSH public key is already on this server"
+echo -e "    (the script will disable password-based SSH login)"
 echo ""
 
 if ! prompt_yn "Ready to begin hardening?"; then
