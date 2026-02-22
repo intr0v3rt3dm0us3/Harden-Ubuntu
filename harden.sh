@@ -349,7 +349,7 @@ echo ""
 if prompt_yn "Set timezone?"; then
     echo ""
     while true; do
-        read -rp "  Enter timezone [default: ${TIMEZONE}]: " INPUT_TZ
+        read -rp "  Enter timezone (press Enter for ${TIMEZONE}): " INPUT_TZ
         INPUT_TZ="${INPUT_TZ:-$TIMEZONE}"
 
         # Validate the timezone exists
@@ -404,7 +404,7 @@ if prompt_yn "Create an admin user?"; then
     echo "  Good examples: deploy, george, sysop, webadmin"
     echo ""
     while true; do
-        read -rp "  Enter username [default: ${ADMIN_USER}]: " INPUT_USER
+        read -rp "  Enter username (press Enter for ${ADMIN_USER}): " INPUT_USER
         INPUT_USER="${INPUT_USER:-$ADMIN_USER}"
 
         # Validate username (lowercase, starts with letter, no spaces)
@@ -1394,7 +1394,7 @@ if prompt_yn "Configure unattended upgrades?"; then
     echo "  https://en.wikipedia.org/wiki/24-hour_clock#Comparison_chart"
     echo ""
     while true; do
-        read -rp "  Enter reboot time [default: 03:00]: " INPUT_REBOOT_TIME
+        read -rp "  Enter reboot time (press Enter for 03:00): " INPUT_REBOOT_TIME
         INPUT_REBOOT_TIME="${INPUT_REBOOT_TIME:-03:00}"
 
         # Validate HH:MM format (24-hour)
@@ -1884,11 +1884,11 @@ if prompt_yn "Set up notifications?"; then
 
     if prompt_yn "Enable email notifications?"; then
         read -rp "  Your email address (alerts sent here): " ALERT_EMAIL
-        read -rp "  SMTP host [default: smtp.gmail.com]: " SMTP_HOST
+        read -rp "  SMTP host (press Enter for smtp.gmail.com): " SMTP_HOST
         SMTP_HOST="${SMTP_HOST:-smtp.gmail.com}"
-        read -rp "  SMTP port [default: 587]: " SMTP_PORT
+        read -rp "  SMTP port (press Enter for 587): " SMTP_PORT
         SMTP_PORT="${SMTP_PORT:-587}"
-        read -rp "  SMTP username [default: ${ALERT_EMAIL}]: " SMTP_USER
+        read -rp "  SMTP username (press Enter for ${ALERT_EMAIL}): " SMTP_USER
         SMTP_USER="${SMTP_USER:-$ALERT_EMAIL}"
         read -rsp "  SMTP password (hidden): " SMTP_PASS
         echo ""
