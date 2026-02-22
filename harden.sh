@@ -13,6 +13,7 @@
 #    chmod +x harden.sh
 #    sudo ./harden.sh
 #
+#  Everything is interactive — no manual editing required.
 #  Each hardening step will prompt you with [Y/n] before executing.
 #  Press Enter to accept the default (Yes) or type 'n' to skip.
 #
@@ -24,62 +25,28 @@ set -euo pipefail
 IFS=$'\n\t'
 
 # =============================================================================
-#  CONFIGURATION — Edit these variables before running
+#  DEFAULTS — All values below are configured interactively during the script.
+#  No manual editing required. Just run: sudo ./harden.sh
 # =============================================================================
 
 # SSH port — randomly generated from IANA dynamic range (49152–65535)
-# This avoids well-known ports that bots commonly scan.
-# A new random port is selected each time the script runs.
 SSH_PORT=$(shuf -i 49152-65535 -n 1)
 
-# The non-root admin user the script will create
+# Defaults (overridden by interactive prompts during the script)
 ADMIN_USER="deploy"
-
-# Your timezone (timedatectl list-timezones to see options)
 TIMEZONE="America/New_York"
 
-# ntfy.sh topic for push notifications (leave empty to skip)
-# Generate a random topic: https://ntfy.sh/app
+# Notification channels (all configured interactively in Step 18)
 NTFY_TOPIC=""
-
-# Discord webhook URL (leave empty to skip)
-# Create at: Channel Settings → Integrations → Webhooks → New Webhook → Copy URL
 DISCORD_WEBHOOK=""
-
-# Slack webhook URL (leave empty to skip)
-# Create at: https://api.slack.com/messaging/webhooks
 SLACK_WEBHOOK=""
-
-# Telegram bot notifications (leave both empty to skip)
-# 1. Message @BotFather on Telegram → /newbot → copy the token
-# 2. Message your bot, then visit: https://api.telegram.org/bot<TOKEN>/getUpdates
-#    to find your chat_id
 TELEGRAM_BOT_TOKEN=""
 TELEGRAM_CHAT_ID=""
-
-# Pushover push notifications (leave both empty to skip)
-# $4.99 one-time per platform, 10,000 messages/month free
-# 1. Create account: https://pushover.net
-# 2. Create app: https://pushover.net/apps/build → copy API Token
-# 3. User Key is on your dashboard: https://pushover.net/dashboard
 PUSHOVER_APP_TOKEN=""
 PUSHOVER_USER_KEY=""
-
-# Gotify self-hosted push notifications (leave both empty to skip)
-# Free, open-source, runs in Docker on your own server
-# 1. Deploy: docker run -d -p 8080:80 -v /var/gotify/data:/app/data gotify/server
-# 2. Create app in web UI → copy the Application Token
 GOTIFY_URL=""
 GOTIFY_TOKEN=""
-
-# n8n self-hosted webhook router (leave empty to skip)
-# Free, open-source IFTTT/Zapier alternative — routes alerts to 500+ services
-# 1. Deploy: docker run -d -p 5678:5678 -v n8n_data:/home/node/.n8n n8nio/n8n
-# 2. Create a Webhook workflow → copy the production webhook URL
 N8N_WEBHOOK=""
-
-# Email for unattended-upgrade reports (leave empty to skip email setup)
-# If using Gmail: create an App Password at https://myaccount.google.com/apppasswords
 ALERT_EMAIL=""
 SMTP_HOST=""
 SMTP_PORT=""
@@ -271,23 +238,21 @@ log_info "Backup directory: $BACKUP_DIR"
 log_info "Log file: $LOG_FILE"
 
 echo ""
-echo -e "${YELLOW}Current configuration:${NC}"
-echo "  SSH Port:    $SSH_PORT (randomly generated — write this down!)"
-echo "  Admin User:  $ADMIN_USER (you can change this in Step 4)"
-echo "  Timezone:    $TIMEZONE"
-echo "  ntfy Topic:  ${NTFY_TOPIC:-"(not set)"}"
-echo "  Discord:     ${DISCORD_WEBHOOK:+"(configured)"}${DISCORD_WEBHOOK:-(not set)}"
-echo "  Slack:       ${SLACK_WEBHOOK:+"(configured)"}${SLACK_WEBHOOK:-(not set)}"
-echo "  Telegram:    ${TELEGRAM_BOT_TOKEN:+"(configured)"}${TELEGRAM_BOT_TOKEN:-(not set)}"
-echo "  Pushover:    ${PUSHOVER_APP_TOKEN:+"(configured)"}${PUSHOVER_APP_TOKEN:-(not set)}"
-echo "  Gotify:      ${GOTIFY_URL:+"(configured)"}${GOTIFY_URL:-(not set)}"
-echo "  n8n:         ${N8N_WEBHOOK:+"(configured)"}${N8N_WEBHOOK:-(not set)}"
-echo "  Alert Email: ${ALERT_EMAIL:-"(not set)"}"
+echo -e "${YELLOW}How this script works:${NC}"
+echo "  • Each step prompts you with [Y/n] before doing anything"
+echo "  • All settings (username, timezone, notifications) are entered interactively"
+echo "  • No manual file editing required — just answer the prompts"
+echo "  • Skip any step by typing 'n' — re-run the script anytime to apply it later"
+echo ""
+echo -e "${YELLOW}Before we begin:${NC}"
+echo "  • SSH Port:  ${BOLD}${SSH_PORT}${NC} (randomly generated — ${RED}write this down!${NC})"
+echo "  • Make sure your SSH public key is already on this server"
+echo "    (the script will disable password-based SSH login)"
 echo ""
 
-if ! prompt_yn "Proceed with these settings?"; then
+if ! prompt_yn "Ready to begin hardening?"; then
     echo ""
-    log_info "Edit the CONFIGURATION section at the top of this script and re-run."
+    log_info "No problem. Run the script again when you're ready."
     exit 0
 fi
 
@@ -374,15 +339,32 @@ fi
 
 log_step "STEP 3: Set Timezone"
 echo "  Current timezone: $(timedatectl show --property=Timezone --value 2>/dev/null || echo 'unknown')"
-echo "  Will set to: $TIMEZONE (default: America/New_York)"
 echo ""
-echo "  Not your timezone? Find yours here:"
+echo "  Not sure of your timezone? Find yours here:"
 echo "  https://en.wikipedia.org/wiki/List_of_tz_database_time_zones"
 echo ""
 echo "  Or run this command to search: timedatectl list-timezones | grep -i <city>"
 echo ""
 
-if prompt_yn "Set timezone to $TIMEZONE?"; then
+if prompt_yn "Set timezone?"; then
+    echo ""
+    while true; do
+        read -rp "  Enter timezone [default: ${TIMEZONE}]: " INPUT_TZ
+        INPUT_TZ="${INPUT_TZ:-$TIMEZONE}"
+
+        # Validate the timezone exists
+        if timedatectl list-timezones 2>/dev/null | grep -qx "$INPUT_TZ"; then
+            TIMEZONE="$INPUT_TZ"
+            break
+        else
+            echo "  Invalid timezone: '${INPUT_TZ}'"
+            echo "  Search for yours: timedatectl list-timezones | grep -i <city>"
+            echo "  Examples: America/New_York, America/Chicago, America/Los_Angeles,"
+            echo "            Europe/London, Asia/Tokyo, Australia/Sydney"
+            echo ""
+        fi
+    done
+
     timedatectl set-timezone "$TIMEZONE"
     timedatectl set-ntp true
     log_info "Timezone set to $TIMEZONE. NTP sync enabled."
@@ -2296,6 +2278,39 @@ DOCKERREPO
         systemctl enable docker
     fi
 
+    # Configure Docker to bind to localhost by default (prevents UFW bypass)
+    log_info "Configuring Docker to default-bind ports to 127.0.0.1..."
+    mkdir -p /etc/docker
+    if [[ -f /etc/docker/daemon.json ]]; then
+        backup_file /etc/docker/daemon.json
+        # Merge ip setting into existing config
+        if command -v python3 &>/dev/null; then
+            python3 -c "
+import json
+with open('/etc/docker/daemon.json') as f:
+    cfg = json.load(f)
+cfg['ip'] = '127.0.0.1'
+with open('/etc/docker/daemon.json', 'w') as f:
+    json.dump(cfg, f, indent=2)
+" 2>/dev/null || true
+        fi
+    else
+        cat > /etc/docker/daemon.json <<'DAEMONJSON'
+{
+  "ip": "127.0.0.1",
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "10m",
+    "max-file": "3"
+  }
+}
+DAEMONJSON
+    fi
+    systemctl restart docker 2>&1 | tee -a "$LOG_FILE"
+    log_info "Docker now binds all published ports to 127.0.0.1 by default."
+    log_info "This means '-p 8080:80' binds to localhost only (not exposed to the internet)."
+    log_info "To intentionally expose a port publicly, use: -p 0.0.0.0:8080:80"
+
     # Run hello-world test
     log_info "Running hello-world verification container..."
     if docker run --rm hello-world 2>&1 | tee -a "$LOG_FILE"; then
@@ -2307,9 +2322,9 @@ DOCKERREPO
     ((STEPS_RUN++))
     log_info "Docker installation complete."
     echo ""
-    echo -e "  ${YELLOW}REMINDER: Always bind Docker ports to localhost:${NC}"
-    echo -e "    docker run -p ${BOLD}127.0.0.1:8080:80${NC} your-image"
-    echo -e "  This prevents Docker from bypassing your UFW firewall rules."
+    echo -e "  ${GREEN}Docker port binding secured:${NC}"
+    echo -e "    -p 8080:80       → binds to 127.0.0.1:8080 (safe, localhost only)"
+    echo -e "    -p 0.0.0.0:8080:80 → explicitly expose to internet (use with caution)"
     echo ""
 else
     ((STEPS_SKIPPED++))
@@ -2351,14 +2366,58 @@ echo "     close port 22 automatically. Or manually:"
 echo ""
 echo -e "     sudo ufw delete allow 22/tcp"
 echo ""
-echo -e "  ${BOLD}4. If you skipped Docker install, enable IP forwarding when you do:${NC}"
+echo -e "  ${BOLD}4. Docker IP forwarding:${NC}"
 echo ""
-echo -e "     sudo mv /etc/sysctl.d/99-docker.conf.disabled /etc/sysctl.d/99-docker.conf"
-echo -e "     sudo sysctl --system"
+if command -v docker &>/dev/null; then
+    # Docker is installed — auto-enable IP forwarding if not already
+    if [[ -f /etc/sysctl.d/99-docker.conf.disabled ]]; then
+        mv /etc/sysctl.d/99-docker.conf.disabled /etc/sysctl.d/99-docker.conf
+        sysctl --system >/dev/null 2>&1
+        echo -e "     ${GREEN}✓ Docker detected — IP forwarding auto-enabled.${NC}"
+    elif [[ -f /etc/sysctl.d/99-docker.conf ]]; then
+        echo -e "     ${GREEN}✓ Docker detected — IP forwarding already enabled.${NC}"
+    else
+        echo -e "     ${GREEN}✓ Docker detected — IP forwarding handled by Docker.${NC}"
+    fi
+else
+    echo "     Docker not installed. If you install it later, run:"
+    echo "     sudo mv /etc/sysctl.d/99-docker.conf.disabled /etc/sysctl.d/99-docker.conf"
+    echo "     sudo sysctl --system"
+fi
 echo ""
-echo -e "  ${BOLD}5. Always bind Docker ports to localhost:${NC}"
+echo -e "  ${BOLD}5. Docker port binding:${NC}"
 echo ""
-echo -e "     docker run -p 127.0.0.1:8080:80 your-image"
+if command -v docker &>/dev/null; then
+    # Docker is installed — ensure daemon.json has localhost binding
+    if [[ -f /etc/docker/daemon.json ]] && grep -q '"ip"' /etc/docker/daemon.json 2>/dev/null; then
+        echo -e "     ${GREEN}✓ Docker configured — ports default to 127.0.0.1 (localhost only).${NC}"
+        echo "       -p 8080:80         → safe, localhost only"
+        echo "       -p 0.0.0.0:8080:80 → explicitly public (use with caution)"
+    else
+        # daemon.json exists but missing ip setting, or doesn't exist — fix it
+        mkdir -p /etc/docker
+        if [[ -f /etc/docker/daemon.json ]]; then
+            if command -v python3 &>/dev/null; then
+                python3 -c "
+import json
+with open('/etc/docker/daemon.json') as f:
+    cfg = json.load(f)
+cfg['ip'] = '127.0.0.1'
+with open('/etc/docker/daemon.json', 'w') as f:
+    json.dump(cfg, f, indent=2)
+" 2>/dev/null || true
+            fi
+        else
+            echo '{"ip": "127.0.0.1"}' > /etc/docker/daemon.json
+        fi
+        systemctl restart docker 2>/dev/null || true
+        echo -e "     ${GREEN}✓ Docker detected — auto-configured ports to bind to 127.0.0.1.${NC}"
+    fi
+else
+    echo "     Docker not installed. If you install it later, the script"
+    echo "     will configure /etc/docker/daemon.json to bind ports to localhost."
+    echo "     Or manually add: {\"ip\": \"127.0.0.1\"} to /etc/docker/daemon.json"
+fi
 echo ""
 echo -e "  ${BOLD}6. Notification channels configured:${NC}"
 echo ""
