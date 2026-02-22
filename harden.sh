@@ -283,10 +283,10 @@ if prompt_yn "Run full system update and upgrade?"; then
     apt clean 2>&1 | tee -a "$LOG_FILE"
     apt autoclean 2>&1 | tee -a "$LOG_FILE"
 
-    ((STEPS_RUN++))
+    ((STEPS_RUN++)) || true
     log_info "System update complete."
 else
-    ((STEPS_SKIPPED++))
+    ((STEPS_SKIPPED++)) || true
     log_warn "Skipped system update."
 fi
 
@@ -326,10 +326,10 @@ if prompt_yn "Install all required packages?"; then
     log_info "Installing packages..."
     DEBIAN_FRONTEND=noninteractive apt install -y "${PACKAGES[@]}" 2>&1 | tee -a "$LOG_FILE"
 
-    ((STEPS_RUN++))
+    ((STEPS_RUN++)) || true
     log_info "Package installation complete."
 else
-    ((STEPS_SKIPPED++))
+    ((STEPS_SKIPPED++)) || true
     log_warn "Skipped package installation. Some later steps may fail without these packages."
 fi
 
@@ -368,9 +368,9 @@ if prompt_yn "Set timezone?"; then
     timedatectl set-timezone "$TIMEZONE"
     timedatectl set-ntp true
     log_info "Timezone set to $TIMEZONE. NTP sync enabled."
-    ((STEPS_RUN++))
+    ((STEPS_RUN++)) || true
 else
-    ((STEPS_SKIPPED++))
+    ((STEPS_SKIPPED++)) || true
     log_warn "Skipped timezone configuration."
 fi
 
@@ -465,7 +465,7 @@ if prompt_yn "Create an admin user?"; then
     chmod 700 "${ADMIN_HOME}/.ssh"
     chmod 600 "${ADMIN_HOME}/.ssh/authorized_keys" 2>/dev/null || true
 
-    ((STEPS_RUN++))
+    ((STEPS_RUN++)) || true
     log_info "Admin user setup complete."
     echo ""
     echo -e "  ${GREEN}Summary:${NC}"
@@ -474,7 +474,7 @@ if prompt_yn "Create an admin user?"; then
     echo "    sudo:       Via the password you just set"
     echo ""
 else
-    ((STEPS_SKIPPED++))
+    ((STEPS_SKIPPED++)) || true
     log_warn "Skipped admin user creation."
 fi
 
@@ -594,7 +594,7 @@ SSHEOF
         log_error "SSH config validation FAILED. Restoring backup..."
         cp "${BACKUP_DIR}/sshd_config.bak" /etc/ssh/sshd_config
         log_error "Original config restored. SSH not changed."
-        ((STEPS_SKIPPED++))
+        ((STEPS_SKIPPED++)) || true
     fi
 
     # Update socket file for new port (Ubuntu 24.04 socket activation)
@@ -613,14 +613,14 @@ SOCKETEOF
     systemctl restart ssh.socket
     log_info "SSH restarted on port $SSH_PORT via ssh.socket."
 
-    ((STEPS_RUN++))
+    ((STEPS_RUN++)) || true
     log_info "SSH hardening complete."
     echo ""
     echo -e "  ${GREEN}${BOLD}NEXT: Open a NEW terminal and test:${NC}"
     echo -e "  ${BOLD}  ssh -p ${SSH_PORT} ${ADMIN_USER}@your-server-ip${NC}"
     echo ""
 else
-    ((STEPS_SKIPPED++))
+    ((STEPS_SKIPPED++)) || true
     log_warn "Skipped SSH hardening."
 fi
 
@@ -699,10 +699,10 @@ UFWDOCKER
         log_info "UFW/Docker rules already present. Skipping."
     fi
 
-    ((STEPS_RUN++))
+    ((STEPS_RUN++)) || true
     log_info "Firewall configuration complete."
 else
-    ((STEPS_SKIPPED++))
+    ((STEPS_SKIPPED++)) || true
     log_warn "Skipped firewall configuration."
 fi
 
@@ -906,11 +906,11 @@ JAILAPPEND
     systemctl enable fail2ban
     systemctl restart fail2ban
 
-    ((STEPS_RUN++))
+    ((STEPS_RUN++)) || true
     log_info "Fail2ban configured and running."
     fail2ban-client status 2>&1 | tee -a "$LOG_FILE"
 else
-    ((STEPS_SKIPPED++))
+    ((STEPS_SKIPPED++)) || true
     log_warn "Skipped Fail2ban configuration."
 fi
 
@@ -1023,10 +1023,10 @@ DOCKEREOF
     # Apply sysctl settings
     sysctl --system 2>&1 | tee -a "$LOG_FILE"
 
-    ((STEPS_RUN++))
+    ((STEPS_RUN++)) || true
     log_info "Kernel hardening applied."
 else
-    ((STEPS_SKIPPED++))
+    ((STEPS_SKIPPED++)) || true
     log_warn "Skipped kernel hardening."
 fi
 
@@ -1080,10 +1080,10 @@ install usb-storage /bin/false
 blacklist usb-storage
 MODEOF
 
-    ((STEPS_RUN++))
+    ((STEPS_RUN++)) || true
     log_info "Unused kernel modules disabled."
 else
-    ((STEPS_SKIPPED++))
+    ((STEPS_SKIPPED++)) || true
     log_warn "Skipped kernel module hardening."
 fi
 
@@ -1120,10 +1120,10 @@ if prompt_yn "Harden file permissions?"; then
     chmod 640 /etc/at.allow 2>/dev/null || true
     rm -f /etc/at.deny 2>/dev/null || true
 
-    ((STEPS_RUN++))
+    ((STEPS_RUN++)) || true
     log_info "File permissions hardened."
 else
-    ((STEPS_SKIPPED++))
+    ((STEPS_SKIPPED++)) || true
     log_warn "Skipped file permissions hardening."
 fi
 
@@ -1147,9 +1147,9 @@ if prompt_yn "Harden shared memory (/dev/shm)?"; then
         log_info "Shared memory already hardened. Skipping."
     fi
 
-    ((STEPS_RUN++))
+    ((STEPS_RUN++)) || true
 else
-    ((STEPS_SKIPPED++))
+    ((STEPS_SKIPPED++)) || true
     log_warn "Skipped shared memory hardening."
 fi
 
@@ -1178,10 +1178,10 @@ COREEOF
 
     systemctl daemon-reload
 
-    ((STEPS_RUN++))
+    ((STEPS_RUN++)) || true
     log_info "Core dumps disabled."
 else
-    ((STEPS_SKIPPED++))
+    ((STEPS_SKIPPED++)) || true
     log_warn "Skipped core dump hardening."
 fi
 
@@ -1302,10 +1302,10 @@ echo ""
 DADEOF
     chmod +x /etc/update-motd.d/99-dad-joke
 
-    ((STEPS_RUN++))
+    ((STEPS_RUN++)) || true
     log_info "Login banners configured (with dad jokes)."
 else
-    ((STEPS_SKIPPED++))
+    ((STEPS_SKIPPED++)) || true
     log_warn "Skipped login banner configuration."
 fi
 
@@ -1343,10 +1343,10 @@ umask 077
 UMASKEOF
     chmod 644 /etc/profile.d/umask.sh
 
-    ((STEPS_RUN++))
+    ((STEPS_RUN++)) || true
     log_info "Login defaults hardened."
 else
-    ((STEPS_SKIPPED++))
+    ((STEPS_SKIPPED++)) || true
     log_warn "Skipped login defaults hardening."
 fi
 
@@ -1444,10 +1444,10 @@ AUTOEOF
 
     systemctl enable --now unattended-upgrades
 
-    ((STEPS_RUN++))
+    ((STEPS_RUN++)) || true
     log_info "Unattended upgrades configured."
 else
-    ((STEPS_SKIPPED++))
+    ((STEPS_SKIPPED++)) || true
     log_warn "Skipped unattended upgrades."
 fi
 
@@ -1479,10 +1479,10 @@ JDEOF
 
     systemctl restart systemd-journald
 
-    ((STEPS_RUN++))
+    ((STEPS_RUN++)) || true
     log_info "Journald configured."
 else
-    ((STEPS_SKIPPED++))
+    ((STEPS_SKIPPED++)) || true
     log_warn "Skipped journald configuration."
 fi
 
@@ -1560,10 +1560,10 @@ AUDITEOF
     systemctl enable auditd
     systemctl restart auditd
 
-    ((STEPS_RUN++))
+    ((STEPS_RUN++)) || true
     log_info "Auditd configured and running."
 else
-    ((STEPS_SKIPPED++))
+    ((STEPS_SKIPPED++)) || true
     log_warn "Skipped auditd configuration."
 fi
 
@@ -2074,10 +2074,10 @@ ACTIONEOF
     fi
     echo ""
 
-    ((STEPS_RUN++))
+    ((STEPS_RUN++)) || true
     log_info "Notification setup complete."
 else
-    ((STEPS_SKIPPED++))
+    ((STEPS_SKIPPED++)) || true
     log_warn "Skipped notification setup."
 fi
 
@@ -2105,10 +2105,10 @@ if prompt_yn "Disable unnecessary services?"; then
     systemctl disable --now motd-news.timer 2>/dev/null || true
     log_info "Disabled motd-news.timer."
 
-    ((STEPS_RUN++))
+    ((STEPS_RUN++)) || true
     log_info "Unnecessary services disabled."
 else
-    ((STEPS_SKIPPED++))
+    ((STEPS_SKIPPED++)) || true
     log_warn "Skipped service cleanup."
 fi
 
@@ -2129,9 +2129,9 @@ if prompt_yn "Verify AppArmor status?"; then
         log_warn "AppArmor status check returned an error."
         log_warn "This is unusual on 24.04 — investigate manually."
     fi
-    ((STEPS_RUN++))
+    ((STEPS_RUN++)) || true
 else
-    ((STEPS_SKIPPED++))
+    ((STEPS_SKIPPED++)) || true
     log_warn "Skipped AppArmor verification."
 fi
 
@@ -2193,11 +2193,11 @@ fi
 PORT22EOF
     chmod 644 /etc/profile.d/close-port22.sh
 
-    ((STEPS_RUN++))
+    ((STEPS_RUN++)) || true
     log_info "Post-reboot port 22 removal prompt installed."
     log_info "It will appear on first login after reboot and self-remove once port 22 is closed."
 else
-    ((STEPS_SKIPPED++))
+    ((STEPS_SKIPPED++)) || true
     log_warn "Skipped post-reboot port 22 prompt."
     log_info "Remember to manually run: sudo ufw delete allow 22/tcp"
 fi
@@ -2319,7 +2319,7 @@ DAEMONJSON
         log_warn "hello-world test failed. Check Docker logs: journalctl -u docker"
     fi
 
-    ((STEPS_RUN++))
+    ((STEPS_RUN++)) || true
     log_info "Docker installation complete."
     echo ""
     echo -e "  ${GREEN}Docker port binding secured:${NC}"
@@ -2327,7 +2327,7 @@ DAEMONJSON
     echo -e "    -p 0.0.0.0:8080:80 → explicitly expose to internet (use with caution)"
     echo ""
 else
-    ((STEPS_SKIPPED++))
+    ((STEPS_SKIPPED++)) || true
     log_warn "Skipped Docker installation."
     log_info "You can install Docker later using the official guide:"
     log_info "https://docs.docker.com/engine/install/ubuntu/"
