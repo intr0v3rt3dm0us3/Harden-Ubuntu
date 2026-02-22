@@ -1,6 +1,8 @@
 # Ubuntu 24.04 LTS — Interactive Server Hardening Script
 
-ALPHA VERSION. TEST AND USE AT OWN RESK.
+*** ALPHA VERSION. ***
+*** TEST AND USE AT OWN RISK. ***
+*** CREATED WITH CLAUDE AI ***
 
 A single interactive bash script that hardens a fresh Ubuntu 24.04 LTS server. Every setting is configured through interactive prompts — **no manual file editing required**. Each step prompts you with **Y/n** before executing.
 
