@@ -520,7 +520,8 @@ if prompt_yn "Create an admin user?"; then
 
     if [[ -f /root/.ssh/authorized_keys ]]; then
         cp /root/.ssh/authorized_keys "${ADMIN_HOME}/.ssh/authorized_keys"
-        KEY_COUNT=$(grep -c "^ssh-" "${ADMIN_HOME}/.ssh/authorized_keys" 2>/dev/null || echo "0")
+        KEY_COUNT=$(grep -c "^ssh-" "${ADMIN_HOME}/.ssh/authorized_keys" 2>/dev/null || true)
+        KEY_COUNT=${KEY_COUNT:-0}
         log_info "Copied root's authorized_keys to $ADMIN_USER (${KEY_COUNT} key(s) found)."
 
         if [[ "$KEY_COUNT" -gt 0 ]]; then
@@ -594,19 +595,51 @@ echo ""
 # Verify SSH keys exist before proceeding
 ADMIN_HOME=$(eval echo "~${ADMIN_USER}")
 if [[ -f "${ADMIN_HOME}/.ssh/authorized_keys" ]]; then
-    KEY_COUNT=$(grep -c "^ssh-" "${ADMIN_HOME}/.ssh/authorized_keys" 2>/dev/null || echo "0")
+    KEY_COUNT=$(grep -c "^ssh-" "${ADMIN_HOME}/.ssh/authorized_keys" 2>/dev/null || true)
+    KEY_COUNT=${KEY_COUNT:-0}
     if [[ "$KEY_COUNT" -gt 0 ]]; then
         echo -e "  ${GREEN}✓ Found ${KEY_COUNT} SSH key(s) for '${ADMIN_USER}' — you're good to proceed.${NC}"
         echo ""
     else
         echo -e "  ${RED}${BOLD}⚠ WARNING: authorized_keys exists but contains no valid keys!${NC}"
-        echo "  Proceeding will lock you out. Add your key first (see Step 4 output)."
+        echo ""
+        echo "  Without a valid key, you WILL be locked out after this step"
+        echo "  because password login will be disabled."
+        echo ""
+        echo -e "  ${BOLD}To fix this now (from YOUR computer, in a new terminal):${NC}"
+        echo ""
+        echo "    1. Generate a key (if you don't have one):"
+        echo "       ssh-keygen -t ed25519 -C \"your-email@example.com\""
+        echo ""
+        echo "    2. Copy it to this server:"
+        echo "       ssh-copy-id root@${SERVER_IP}"
+        echo ""
+        echo "    3. Then copy it to '${ADMIN_USER}':"
+        echo "       cp /root/.ssh/authorized_keys ${ADMIN_HOME}/.ssh/authorized_keys"
+        echo "       chown ${ADMIN_USER}:${ADMIN_USER} ${ADMIN_HOME}/.ssh/authorized_keys"
+        echo ""
+        echo -e "  ${YELLOW}Or type 'n' below to skip SSH hardening until keys are in place.${NC}"
         echo ""
     fi
 else
     echo -e "  ${RED}${BOLD}⚠ WARNING: No SSH keys found for '${ADMIN_USER}'!${NC}"
-    echo "  If you continue and skip key setup, password login stays enabled."
-    echo "  If you continue and disable password login, you WILL be locked out."
+    echo ""
+    echo "  Without a key, you will be locked out if password login is disabled."
+    echo ""
+    echo -e "  ${BOLD}To fix this now (from YOUR computer, in a new terminal):${NC}"
+    echo ""
+    echo "    1. Generate a key (if you don't have one):"
+    echo "       ssh-keygen -t ed25519 -C \"your-email@example.com\""
+    echo ""
+    echo "    2. Copy it to this server:"
+    echo "       ssh-copy-id root@${SERVER_IP}"
+    echo ""
+    echo "    3. Then copy it to '${ADMIN_USER}':"
+    echo "       mkdir -p ${ADMIN_HOME}/.ssh"
+    echo "       cp /root/.ssh/authorized_keys ${ADMIN_HOME}/.ssh/authorized_keys"
+    echo "       chown -R ${ADMIN_USER}:${ADMIN_USER} ${ADMIN_HOME}/.ssh"
+    echo ""
+    echo -e "  ${YELLOW}Or type 'n' below to skip SSH hardening until keys are in place.${NC}"
     echo ""
 fi
 
