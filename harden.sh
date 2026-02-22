@@ -280,8 +280,8 @@ if prompt_yn "Run full system update and upgrade?"; then
     apt autoremove -y 2>&1 | tee -a "$LOG_FILE"
 
     log_info "Cleaning apt cache..."
-    apt clean -y 2>&1 | tee -a "$LOG_FILE"
-    apt autoclean -y 2>&1 | tee -a "$LOG_FILE"
+    apt clean 2>&1 | tee -a "$LOG_FILE"
+    apt autoclean 2>&1 | tee -a "$LOG_FILE"
 
     ((STEPS_RUN++))
     log_info "System update complete."
