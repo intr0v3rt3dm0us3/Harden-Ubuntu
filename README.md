@@ -1,6 +1,6 @@
 # Ubuntu 24.04 LTS — Interactive Server Hardening Script
 
-A single interactive bash script that hardens a fresh Ubuntu 24.04 LTS server. Each step prompts you with **Y/n** before executing — no manual file editing required.
+A single interactive bash script that hardens a fresh Ubuntu 24.04 LTS server. Every setting is configured through interactive prompts — **no manual file editing required**. Each step prompts you with **Y/n** before executing.
 
 Designed for **DigitalOcean droplets** (512MB / 1 CPU / 10GB SSD) but works on any Ubuntu 24.04 VPS.
 
@@ -55,54 +55,25 @@ ssh root@your-server-ip
 # 2. Download the script
 curl -O https://raw.githubusercontent.com/YOUR_USERNAME/ubuntu-hardening/main/harden.sh
 
-# 3. Edit the configuration section at the top
-nano harden.sh
-
-# 4. Make executable and run
+# 3. Make executable and run — everything is interactive, no editing required
 chmod +x harden.sh
 sudo ./harden.sh
 ```
 
 ## Configuration
 
-Edit the variables at the top of `harden.sh` before running:
+Everything is configured interactively as you step through the script — no manual file editing required. Here's what each step will prompt you for:
 
-```bash
-# SSH port is randomized automatically (49152–65535)
-# Override with a fixed port if preferred:
-# SSH_PORT="48222"
+| Setting | When prompted | Default |
+|---------|-------------|---------|
+| Admin username | Step 4 | `deploy` |
+| Admin password | Step 4 | (you set it) |
+| Timezone | Step 3 | `America/New_York` |
+| SSH port | Auto-generated | Random (49152–65535) |
+| Auto-reboot time | Step 15 | `03:00` |
+| Notifications | Step 18 | (choose any/all of 8 channels) |
 
-ADMIN_USER="deploy"       # Non-root admin username (or choose interactively)
-TIMEZONE="America/New_York"
-
-# All notification channels below can be configured interactively in Step 18.
-# Pre-filling them here is optional — the script will prompt you either way.
-
-# Push notifications
-NTFY_TOPIC=""             # https://ntfy.sh/app
-DISCORD_WEBHOOK=""        # Channel Settings → Integrations → Webhooks
-SLACK_WEBHOOK=""          # https://api.slack.com/messaging/webhooks
-TELEGRAM_BOT_TOKEN=""     # @BotFather → /newbot
-TELEGRAM_CHAT_ID=""       # https://api.telegram.org/bot<TOKEN>/getUpdates
-
-# Pushover — $4.99 one-time, mobile push with priority levels
-PUSHOVER_APP_TOKEN=""     # https://pushover.net/apps/build
-PUSHOVER_USER_KEY=""      # https://pushover.net/dashboard
-
-# Gotify — free, self-hosted push notifications
-GOTIFY_URL=""             # e.g., https://gotify.example.com
-GOTIFY_TOKEN=""           # Create in Gotify web UI → Apps tab
-
-# n8n — free, self-hosted webhook router (IFTTT/Zapier alternative)
-N8N_WEBHOOK=""            # e.g., https://n8n.example.com/webhook/fail2ban-alerts
-
-# Email alerts (for unattended-upgrade reports)
-ALERT_EMAIL=""
-SMTP_HOST=""
-SMTP_PORT=""
-SMTP_USER=""
-SMTP_PASS=""
-```
+Every prompt accepts a default by pressing Enter, so you can blaze through the basics and only pause on the steps you want to customize.
 
 ## After Running
 
@@ -120,12 +91,14 @@ sudo reboot
 #    "Port 22 is still open. Close it now? [Y/n]"
 #    Just press Enter to close it. The prompt self-removes.
 
-# 4. If you skipped Docker install, enable IP forwarding when ready
+# 4. Docker IP forwarding is auto-detected and enabled if Docker is installed.
+#    If you install Docker later, run:
 sudo mv /etc/sysctl.d/99-docker.conf.disabled /etc/sysctl.d/99-docker.conf
 sudo sysctl --system
 
-# 5. Always bind Docker ports to localhost (prevents UFW bypass)
-docker run -p 127.0.0.1:8080:80 your-image
+# 5. Docker port binding is auto-configured to default to 127.0.0.1 (localhost).
+#    -p 8080:80         → safe, binds to localhost only
+#    -p 0.0.0.0:8080:80 → explicitly expose to internet (use with caution)
 ```
 
 ## Docker + UFW Safety
